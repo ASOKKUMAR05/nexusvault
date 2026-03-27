@@ -24,29 +24,17 @@ class VersioningService {
             // Increment version number
             const newVersionNumber = file.currentVersion + 1;
 
-            // Create version directory if it doesn't exist
-            const versionDir = path.join(
-                config.upload.uploadDir,
-                userId.toString(),
-                'versions',
-                fileId.toString()
-            );
-
-            await storageService.createUserDirectory(userId);
-            const fs = require('fs');
-            if (!fs.existsSync(versionDir)) {
-                fs.mkdirSync(versionDir, { recursive: true });
-            }
-
-            // Copy current file to version directory
+            // Create version directory structure in S3 (logical)
             const versionFilename = `v${newVersionNumber}-${uuidv4()}-${file.filename}`;
-            const versionPath = path.join(versionDir, versionFilename);
+            const versionPath = `${userId}/versions/${fileId}/${versionFilename}`;
 
-            await storageService.copyFile(filePath, versionPath);
+            // Copy current file to version key in S3
+            // filePath shouldn't be used since we can copy from file.path
+            await storageService.copyFile(file.path, versionPath);
 
             // Get file stats
             const stats = await storageService.getFileStats(versionPath);
-            const contentHash = await generateContentHash(versionPath);
+            const contentHash = file.contentHash;
 
             // Create version record
             const version = await FileVersion.create({

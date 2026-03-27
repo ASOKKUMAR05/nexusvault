@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Cloud, Lock, Mail, User, Sparkles } from 'lucide-react';
 import '../styles/Auth.css';
 
 const RegisterPage = () => {
@@ -43,24 +42,14 @@ const RegisterPage = () => {
 
     return (
         <div className="auth-container">
-            <div className="auth-background">
-                <div className="auth-blob blob-1"></div>
-                <div className="auth-blob blob-2"></div>
-                <div className="auth-blob blob-3"></div>
-            </div>
-
             <div className="auth-content animate-fadeIn">
                 <div className="auth-header">
-                    <div className="auth-logo">
-                        <Cloud size={48} className="logo-icon" />
-                        <Sparkles size={20} className="sparkle" />
-                    </div>
-                    <h1 className="gradient-text">NexusVault</h1>
-                    <p>Your Intelligent Cloud Storage</p>
+                    <h1>NexusVault</h1>
+                    <p>Your cloud storage, simplified</p>
                 </div>
 
-                <div className="auth-card glass">
-                    <h2>Create Account</h2>
+                <div className="auth-card">
+                    <h2>Create account</h2>
                     <p className="auth-subtitle">Get started with 5GB free storage</p>
 
                     {error && (
@@ -71,10 +60,7 @@ const RegisterPage = () => {
 
                     <form onSubmit={handleSubmit} className="auth-form">
                         <div className="form-group">
-                            <label htmlFor="name">
-                                <User size={18} />
-                                Full Name
-                            </label>
+                            <label htmlFor="name">Full name</label>
                             <input
                                 type="text"
                                 id="name"
@@ -88,10 +74,7 @@ const RegisterPage = () => {
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="email">
-                                <Mail size={18} />
-                                Email Address
-                            </label>
+                            <label htmlFor="email">Email</label>
                             <input
                                 type="email"
                                 id="email"
@@ -105,10 +88,7 @@ const RegisterPage = () => {
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="password">
-                                <Lock size={18} />
-                                Password
-                            </label>
+                            <label htmlFor="password">Password</label>
                             <input
                                 type="password"
                                 id="password"
@@ -122,10 +102,7 @@ const RegisterPage = () => {
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="confirmPassword">
-                                <Lock size={18} />
-                                Confirm Password
-                            </label>
+                            <label htmlFor="confirmPassword">Confirm password</label>
                             <input
                                 type="password"
                                 id="confirmPassword"
@@ -141,7 +118,7 @@ const RegisterPage = () => {
                         <button type="submit" className="btn btn-primary w-full" disabled={loading}>
                             {loading ? (
                                 <>
-                                    <div className="spinner" style={{ width: '20px', height: '20px', borderWidth: '2px' }}></div>
+                                    <div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }}></div>
                                     Creating account...
                                 </>
                             ) : (

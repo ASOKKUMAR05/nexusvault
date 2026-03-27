@@ -2,181 +2,145 @@ const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
 const config = require('../../config/config');
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, CopyObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
 
 /**
- * Storage Service - Handle file system operations
+ * Storage Service - Handle file system operations via AWS S3
  */
 class StorageService {
-    /**
-     * Save file (already handled by multer, but this can be used for additional operations)
-     */
-    async saveFile(filePath, data) {
-        try {
-            await fs.writeFile(filePath, data);
-            return { success: true };
-        } catch (error) {
-            console.error('Error saving file:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Read file
-     */
-    async readFile(filePath) {
-        try {
-            const data = await fs.readFile(filePath);
-            return data;
-        } catch (error) {
-            console.error('Error reading file:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Delete file
-     */
-    async deleteFile(filePath) {
-        try {
-            if (fsSync.existsSync(filePath)) {
-                await fs.unlink(filePath);
-                return { success: true };
+    constructor() {
+        this.s3Client = new S3Client({
+            region: config.aws.region,
+            credentials: {
+                accessKeyId: config.aws.accessKeyId,
+                secretAccessKey: config.aws.secretAccessKey
             }
-            return { success: false, message: 'File not found' };
-        } catch (error) {
-            console.error('Error deleting file:', error);
-            throw error;
-        }
+        });
+        this.bucketName = config.aws.bucketName;
     }
 
     /**
-     * Copy file (for versioning)
+     * Save file
+     * Uploads the local file to S3
      */
-    async copyFile(sourcePath, destinationPath) {
+    async saveFile(localFilePath, s3Key) {
         try {
-            await fs.copyFile(sourcePath, destinationPath);
+            const fileStream = fsSync.createReadStream(localFilePath);
+            const command = new PutObjectCommand({
+                Bucket: this.bucketName,
+                Key: s3Key,
+                Body: fileStream
+            });
+            await this.s3Client.send(command);
             return { success: true };
         } catch (error) {
-            console.error('Error copying file:', error);
+            console.error('Error uploading file to S3:', error);
             throw error;
         }
     }
 
     /**
-     * Move file
+     * Get S3 Object Stream for reading/downloading
      */
-    async moveFile(sourcePath, destinationPath) {
+    async getFileStream(s3Key) {
         try {
-            await fs.rename(sourcePath, destinationPath);
+            const command = new GetObjectCommand({
+                Bucket: this.bucketName,
+                Key: s3Key
+            });
+            const response = await this.s3Client.send(command);
+            return response.Body; // Readable node stream
+        } catch (error) {
+            console.error('Error reading file from S3:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete file from S3
+     */
+    async deleteFile(s3Key) {
+        try {
+            // Also attempt to delete locally just in case it's a local file being passed (backward compatibility cleanup)
+            if (fsSync.existsSync(s3Key)) {
+                await fs.unlink(s3Key);
+            }
+            
+            const command = new DeleteObjectCommand({
+                Bucket: this.bucketName,
+                Key: s3Key
+            });
+            await this.s3Client.send(command);
             return { success: true };
         } catch (error) {
-            console.error('Error moving file:', error);
+            console.error('Error deleting file from S3:', error);
             throw error;
         }
     }
 
     /**
-     * Check if file exists
+     * Copy file (for versioning) in S3
      */
-    async fileExists(filePath) {
+    async copyFile(sourceKey, destinationKey) {
         try {
-            await fs.access(filePath);
+            const command = new CopyObjectCommand({
+                Bucket: this.bucketName,
+                CopySource: `${this.bucketName}/${sourceKey}`,
+                Key: destinationKey
+            });
+            await this.s3Client.send(command);
+            return { success: true };
+        } catch (error) {
+            console.error('Error copying file in S3:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Check if file exists in S3
+     */
+    async fileExists(s3Key) {
+        try {
+            const command = new HeadObjectCommand({
+                Bucket: this.bucketName,
+                Key: s3Key
+            });
+            await this.s3Client.send(command);
             return true;
-        } catch {
-            return false;
-        }
-    }
-
-    /**
-     * Get file stats
-     */
-    async getFileStats(filePath) {
-        try {
-            const stats = await fs.stat(filePath);
-            return stats;
         } catch (error) {
-            console.error('Error getting file stats:', error);
+            if (error.name === 'NotFound') return false;
+            console.error('Error checking if file exists in S3:', error);
             throw error;
         }
     }
 
     /**
-     * Create user directory
+     * Get file stats from S3
      */
-    async createUserDirectory(userId) {
+    async getFileStats(s3Key) {
         try {
-            const userDir = path.join(config.upload.uploadDir, userId.toString());
-
-            if (!fsSync.existsSync(userDir)) {
-                await fs.mkdir(userDir, { recursive: true });
-            }
-
-            return userDir;
+            const command = new HeadObjectCommand({
+                Bucket: this.bucketName,
+                Key: s3Key
+            });
+            const response = await this.s3Client.send(command);
+            return {
+                size: response.ContentLength,
+                lastModified: response.LastModified,
+                contentType: response.ContentType
+            };
         } catch (error) {
-            console.error('Error creating user directory:', error);
+            console.error('Error getting file stats from S3:', error);
             throw error;
         }
     }
 
     /**
-     * Get user storage usage
+     * Clean up orphaned files (Dummy method since S3 cleanup is managed differently)
+     * To truly clean up orphaned files we'd list S3 objects and compare with DB.
      */
-    async getUserStorageUsage(userId) {
-        try {
-            const userDir = path.join(config.upload.uploadDir, userId.toString());
-
-            if (!fsSync.existsSync(userDir)) {
-                return 0;
-            }
-
-            let totalSize = 0;
-            const files = await fs.readdir(userDir);
-
-            for (const file of files) {
-                const filePath = path.join(userDir, file);
-                const stats = await fs.stat(filePath);
-
-                if (stats.isFile()) {
-                    totalSize += stats.size;
-                }
-            }
-
-            return totalSize;
-        } catch (error) {
-            console.error('Error calculating storage usage:', error);
-            return 0;
-        }
-    }
-
-    /**
-     * Clean up orphaned files (files not in database)
-     */
-    async cleanupOrphanedFiles(userId, validFilePaths) {
-        try {
-            const userDir = path.join(config.upload.uploadDir, userId.toString());
-
-            if (!fsSync.existsSync(userDir)) {
-                return { deleted: 0 };
-            }
-
-            const files = await fs.readdir(userDir);
-            let deletedCount = 0;
-
-            for (const file of files) {
-                const filePath = path.join(userDir, file);
-                const fullPath = path.resolve(filePath);
-
-                if (!validFilePaths.includes(fullPath)) {
-                    await fs.unlink(filePath);
-                    deletedCount++;
-                }
-            }
-
-            return { deleted: deletedCount };
-        } catch (error) {
-            console.error('Error cleaning up orphaned files:', error);
-            throw error;
-        }
+    async cleanupOrphanedFiles(userId, validS3Keys) {
+        return { deleted: 0 };
     }
 }
 

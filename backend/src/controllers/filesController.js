@@ -24,8 +24,8 @@ exports.uploadFile = async (req, res) => {
 
         // Check storage quota
         if (user.storageUsed + req.file.size > user.storageQuota) {
-            // Delete uploaded file
-            await storageService.deleteFile(req.file.path);
+            // Delete uploaded tmp file
+            await fs.promises.unlink(req.file.path).catch(err => console.error('Failed to delete temp file:', err));
             return errorResponse(res, 400, 'Storage quota exceeded');
         }
 
@@ -38,11 +38,19 @@ exports.uploadFile = async (req, res) => {
         // AI categorization
         const { category, tags } = await aiService.categorizeFile(req.file);
 
+        const s3Key = `${req.user.id}/${req.file.filename}`;
+
+        // Upload to S3
+        await storageService.saveFile(req.file.path, s3Key);
+
+        // Delete temporary local file
+        await fs.promises.unlink(req.file.path).catch(err => console.error('Failed to delete temp file:', err));
+
         // Create file record
         const file = await File.create({
             filename: req.file.filename,
             originalName: req.file.originalname,
-            path: req.file.path,
+            path: s3Key, // Store S3 key instead of local path
             size: req.file.size,
             mimeType: req.file.mimetype,
             owner: req.user.id,
@@ -177,8 +185,9 @@ exports.downloadFile = async (req, res) => {
             return errorResponse(res, 404, 'File not found');
         }
 
-        // Check if file exists on disk
-        if (!fs.existsSync(file.path)) {
+        // Check if file exists in S3
+        const exists = await storageService.fileExists(file.path);
+        if (!exists) {
             return errorResponse(res, 404, 'File not found on storage');
         }
 
@@ -187,8 +196,11 @@ exports.downloadFile = async (req, res) => {
         file.lastAccessedAt = Date.now();
         await file.save();
 
-        // Send file
-        res.download(file.path, file.originalName);
+        // Stream file from S3 to response
+        const fileStream = await storageService.getFileStream(file.path);
+        res.setHeader('Content-Disposition', `attachment; filename="${file.originalName}"`);
+        res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
+        fileStream.pipe(res);
     } catch (error) {
         console.error('Error in downloadFile:', error);
         errorResponse(res, 500, 'Error downloading file');

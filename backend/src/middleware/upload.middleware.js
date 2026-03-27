@@ -6,15 +6,15 @@ const config = require('../config/config');
 // Configure storage
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const userDir = path.join(config.upload.uploadDir, req.user.id.toString());
+        const tmpDir = path.join(__dirname, '../../tmp');
         const fs = require('fs');
 
-        // Create user directory if it doesn't exist
-        if (!fs.existsSync(userDir)) {
-            fs.mkdirSync(userDir, { recursive: true });
+        // Create tmp directory if it doesn't exist
+        if (!fs.existsSync(tmpDir)) {
+            fs.mkdirSync(tmpDir, { recursive: true });
         }
 
-        cb(null, userDir);
+        cb(null, tmpDir);
     },
     filename: (req, file, cb) => {
         const uniqueName = `${uuidv4()}-${file.originalname}`;

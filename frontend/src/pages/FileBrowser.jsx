@@ -2,10 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { fileService } from '../services/file.service';
-import {
-    Cloud, Upload, Search, Download, Trash2, ArrowLeft,
-    FileText, Image, Video, Music, Archive, Code, Folder, Filter
-} from 'lucide-react';
+import { Upload, Search, Download, Trash2, ArrowLeft } from 'lucide-react';
 import '../styles/FileBrowser.css';
 
 const FileBrowser = () => {
@@ -93,18 +90,6 @@ const FileBrowser = () => {
         }
     };
 
-    const categoryIcons = {
-        Documents: FileText,
-        Images: Image,
-        Videos: Video,
-        Audio: Music,
-        Archives: Archive,
-        Code: Code,
-        Spreadsheets: FileText,
-        Presentations: FileText,
-        Other: Folder
-    };
-
     const categories = ['All', 'Documents', 'Images', 'Videos', 'Audio', 'Code', 'Archives', 'Other'];
 
     const filteredFiles = files;
@@ -112,30 +97,29 @@ const FileBrowser = () => {
     return (
         <div className="file-browser-container">
             {/* Header */}
-            <header className="file-browser-header glass">
+            <header className="file-browser-header">
                 <div className="header-content">
                     <button onClick={() => navigate('/dashboard')} className="btn btn-ghost">
-                        <ArrowLeft size={18} />
-                        Back to Dashboard
+                        <ArrowLeft size={16} />
+                        Back
                     </button>
 
                     <div className="logo-section">
-                        <Cloud size={28} />
-                        <span className="gradient-text">NexusVault</span>
+                        <span>NexusVault</span>
                     </div>
 
-                    <div className="user-avatar gradient-primary">
+                    <div className="user-avatar">
                         {user?.name?.charAt(0).toUpperCase()}
                     </div>
                 </div>
             </header>
 
-            <main className="file-browser-main container">
+            <main className="file-browser-main">
                 {/* Search and Upload Bar */}
                 <div className="toolbar animate-fadeIn">
                     <div className="search-section">
                         <div className="search-bar">
-                            <Search size={20} />
+                            <Search size={16} />
                             <input
                                 type="text"
                                 placeholder="Search files..."
@@ -159,17 +143,17 @@ const FileBrowser = () => {
                         className="btn btn-primary"
                         disabled={uploading}
                     >
-                        <Upload size={18} />
-                        {uploading ? `Uploading ${uploadProgress}%` : 'Upload File'}
+                        <Upload size={16} />
+                        {uploading ? `Uploading ${uploadProgress}%` : 'Upload'}
                     </button>
                 </div>
 
                 {/* Upload Progress */}
                 {uploading && (
-                    <div className="upload-progress card animate-fadeIn">
+                    <div className="upload-progress animate-fadeIn">
                         <div className="progress-bar">
                             <div
-                                className="progress-fill gradient-primary"
+                                className="progress-fill"
                                 style={{ width: `${uploadProgress}%` }}
                             ></div>
                         </div>
@@ -192,19 +176,14 @@ const FileBrowser = () => {
 
                 {/* Files Grid */}
                 {loading ? (
-                    <div className="flex items-center justify-center" style={{ padding: 'var(--space-2xl)' }}>
+                    <div className="flex items-center justify-center" style={{ padding: '3rem' }}>
                         <div className="spinner"></div>
                     </div>
                 ) : filteredFiles.length > 0 ? (
                     <div className="files-grid animate-fadeIn">
                         {filteredFiles.map(file => {
-                            const Icon = categoryIcons[file.category] || Folder;
                             return (
-                                <div key={file.id} className="file-card glass">
-                                    <div className="file-icon-wrapper">
-                                        <Icon size={40} className="file-icon" />
-                                    </div>
-
+                                <div key={file.id} className="file-card">
                                     <div className="file-details">
                                         <h3 className="file-name" title={file.name}>{file.name}</h3>
                                         <div className="file-meta">
@@ -228,14 +207,14 @@ const FileBrowser = () => {
                                             className="action-btn"
                                             title="Download"
                                         >
-                                            <Download size={18} />
+                                            <Download size={15} />
                                         </button>
                                         <button
                                             onClick={() => handleDelete(file.id)}
                                             className="action-btn delete"
                                             title="Delete"
                                         >
-                                            <Trash2 size={18} />
+                                            <Trash2 size={15} />
                                         </button>
                                     </div>
 
@@ -249,15 +228,14 @@ const FileBrowser = () => {
                         })}
                     </div>
                 ) : (
-                    <div className="empty-state card animate-fadeIn">
-                        <Folder size={64} />
-                        <h2>No files found</h2>
-                        <p>Upload your first file to get started!</p>
+                    <div className="empty-state animate-fadeIn">
+                        <h2>No files yet</h2>
+                        <p>Upload your first file to get started</p>
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             className="btn btn-primary"
                         >
-                            <Upload size={18} />
+                            <Upload size={16} />
                             Upload File
                         </button>
                     </div>
