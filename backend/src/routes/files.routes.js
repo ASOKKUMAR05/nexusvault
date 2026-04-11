@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const filesController = require('../controllers/filesController');
 const { protect } = require('../middleware/auth.middleware');
-const { upload, handleMulterError } = require('../middleware/upload');
+const { upload, handleMulterError } = require('../middleware/upload.middleware');
 const { getPresignedUploadUrl } = require('../controllers/filesController');
 // All routes are protected
 router.use(protect);
