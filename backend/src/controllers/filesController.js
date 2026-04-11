@@ -59,10 +59,15 @@ exports.uploadFile = async (req, res) => {
         }
 
         const file = await File.create({
-            url,
-            name,
-            type,
-            user: req.user.id
+            filename: name,
+            originalName: name,
+            path: url,
+            mimeType: type,
+            owner: req.user.id,
+            size: 0, // since S3 already has file
+            category: "Other",
+            tags: [],
+            aiProcessed: false
         });
 
         res.status(201).json({
@@ -71,14 +76,13 @@ exports.uploadFile = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error in uploadFile:', error);
+        console.error("UPLOAD ERROR:", error); // 🔥 IMPORTANT
         res.status(500).json({
             success: false,
             message: "Upload failed"
         });
     }
 };
-
 /**
  * @desc    Get all files for user
  * @route   GET /api/files
