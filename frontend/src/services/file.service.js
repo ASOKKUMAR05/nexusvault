@@ -22,7 +22,7 @@ export const fileService = {
             });
 
             // 3. Save file metadata in backend (IMPORTANT)
-            await api.post('/files', {
+            await api.post('/files/upload', {
                 url: fileUrl,
                 name: file.name,
                 type: file.type

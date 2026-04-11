@@ -10,7 +10,7 @@ router.use(protect);
 // File operations
 
 
-router.get('/presigned-upload', getPresignedUploadUrl);
+router.get('/presigned-upload', filesController.getPresignedUploadUrl);
 router.post('/upload', upload.single('file'), handleMulterError, filesController.uploadFile);
 router.get('/', filesController.getFiles);
 router.get('/stats', filesController.getStorageStats);
@@ -18,6 +18,7 @@ router.get('/search', filesController.searchFiles);
 router.get('/duplicates', filesController.getDuplicates);
 router.get('/:id', filesController.getFileById);
 router.get('/:id/download', filesController.downloadFile);
+router.post('/', filesController.uploadFile);
 router.delete('/:id', filesController.deleteFile);
 
 module.exports = router;
