@@ -31,7 +31,7 @@
     "mongoose": "^9.1.2",
     "multer": "^2.0.2",
     "sharp": "^0.34.5",
-    "uuid": "^13.0.0"
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
