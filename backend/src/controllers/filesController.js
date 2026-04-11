@@ -49,73 +49,33 @@ exports.getPresignedUploadUrl = async (req, res) => {
  */
 exports.uploadFile = async (req, res) => {
     try {
-        if (!req.file) {
-            return errorResponse(res, 400, 'No file uploaded');
+        const { url, name, type } = req.body;
+
+        if (!url || !name || !type) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing file data"
+            });
         }
 
-        const user = await User.findById(req.user.id);
-
-        // Check storage quota
-        if (user.storageUsed + req.file.size > user.storageQuota) {
-            // Delete uploaded tmp file
-            await fs.promises.unlink(req.file.path).catch(err => console.error('Failed to delete temp file:', err));
-            return errorResponse(res, 400, 'Storage quota exceeded');
-        }
-
-        // Check for duplicates
-        const duplicateCheck = await duplicateService.checkDuplicate(req.user.id, req.file.path);
-
-        // Generate content hash
-        const contentHash = duplicateCheck.hash || await generateContentHash(req.file.path);
-
-        // AI categorization
-        const { category, tags } = await aiService.categorizeFile(req.file);
-
-        const s3Key = `${req.user.id}/${req.file.filename}`;
-
-        // Upload to S3
-        await storageService.saveFile(req.file.path, s3Key);
-
-        // Delete temporary local file
-        await fs.promises.unlink(req.file.path).catch(err => console.error('Failed to delete temp file:', err));
-
-        // Create file record
         const file = await File.create({
-            filename: req.file.filename,
-            originalName: req.file.originalname,
-            path: s3Key, // Store S3 key instead of local path
-            size: req.file.size,
-            mimeType: req.file.mimetype,
-            owner: req.user.id,
-            category,
-            tags,
-            contentHash,
-            aiProcessed: true
+            url,
+            name,
+            type,
+            user: req.user.id
         });
 
-        // Update user storage
-        user.storageUsed += req.file.size;
-        await user.save();
-
-        successResponse(res, 201, 'File uploaded successfully', {
-            file: {
-                id: file._id,
-                name: file.originalName,
-                size: file.size,
-                category: file.category,
-                tags: file.tags,
-                uploadedAt: file.createdAt
-            },
-            duplicate: duplicateCheck.isDuplicate ? duplicateCheck.existingFile : null,
-            storage: {
-                used: user.storageUsed,
-                quota: user.storageQuota,
-                percentage: user.getStoragePercentage()
-            }
+        res.status(201).json({
+            success: true,
+            data: file
         });
+
     } catch (error) {
         console.error('Error in uploadFile:', error);
-        errorResponse(res, 500, 'Error uploading file');
+        res.status(500).json({
+            success: false,
+            message: "Upload failed"
+        });
     }
 };
 
