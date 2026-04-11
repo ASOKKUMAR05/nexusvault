@@ -74,18 +74,6 @@ app.use((req, res) => {
 const PORT = config.port;
 app.listen(PORT, () => {
     console.log(`
-    ╔═══════════════════════════════════════╗
-    ║                                       ║
-    ║      🚀 NexusVault API Server        ║
-    ║                                       ║
-    ║  Environment: ${config.nodeEnv.padEnd(18)} ║
-    ║  Port: ${PORT.toString().padEnd(28)} ║
-    ║  Status: Running ✅                   ║
-    ║                                       ║
-    ╚═══════════════════════════════════════╝
-    
-    📡 API: http://localhost:${PORT}
-    🏥 Health: http://localhost:${PORT}/api/health
   `);
 });
 

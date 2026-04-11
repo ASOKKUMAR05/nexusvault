@@ -11,10 +11,7 @@ class StorageService {
     constructor() {
         this.s3Client = new S3Client({
             region: config.aws.region,
-            credentials: {
-                accessKeyId: config.aws.accessKeyId,
-                secretAccessKey: config.aws.secretAccessKey
-            }
+
         });
         this.bucketName = config.aws.bucketName;
     }
@@ -65,7 +62,7 @@ class StorageService {
             if (fsSync.existsSync(s3Key)) {
                 await fs.unlink(s3Key);
             }
-            
+
             const command = new DeleteObjectCommand({
                 Bucket: this.bucketName,
                 Key: s3Key

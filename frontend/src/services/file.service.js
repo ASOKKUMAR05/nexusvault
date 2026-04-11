@@ -1,22 +1,45 @@
 import api from './api';
 
 export const fileService = {
-    // Upload file
+
+    // 🚀 Upload file using Pre-Signed URL
     uploadFile: async (file, onProgress) => {
-        const formData = new FormData();
-        formData.append('file', file);
+        try {
+            // 1. Get presigned URL from backend
+            const res = await api.get('/files/presigned-upload', {
+                params: { fileType: file.type }
+            });
 
-        const response = await api.post('/files/upload', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            },
-            onUploadProgress: (progressEvent) => {
-                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                if (onProgress) onProgress(percentCompleted);
-            }
-        });
+            const { uploadUrl, fileUrl } = res.data;
 
-        return response.data;
+            // 2. Upload directly to S3
+            await fetch(uploadUrl, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": file.type
+                },
+                body: file
+            });
+
+            // 3. Save file metadata in backend (IMPORTANT)
+            await api.post('/files', {
+                url: fileUrl,
+                name: file.name,
+                type: file.type
+            });
+
+            // 4. Progress (since fetch doesn't support progress)
+            if (onProgress) onProgress(100);
+
+            return {
+                success: true,
+                fileUrl
+            };
+
+        } catch (error) {
+            console.error("Upload error:", error);
+            throw error;
+        }
     },
 
     // Get all files
@@ -37,7 +60,6 @@ export const fileService = {
             responseType: 'blob'
         });
 
-        // Create download link
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
