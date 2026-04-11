@@ -8,7 +8,7 @@ const authRoutes = require('./routes/auth.routes');
 const filesRoutes = require('./routes/files.routes');
 const sharingRoutes = require('./routes/sharing.routes');
 const versionsRoutes = require('./routes/versions.routes');
-
+require('dotenv').config({ path: __dirname + '/../.env' });
 // Initialize app
 const app = express();
 
