@@ -12,35 +12,35 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 const s3 = new S3Client({
-  region: "ap-south-1"
+    region: "ap-south-1"
 });
 
 exports.getPresignedUploadUrl = async (req, res) => {
-  try {
-    const { fileType } = req.query;
+    try {
+        const { fileType } = req.query;
 
-    const fileName = `uploads/${Date.now()}-${Math.random()}`;
+        const fileName = `uploads/${Date.now()}-${Math.random()}`;
 
-    const command = new PutObjectCommand({
-      Bucket: "my-nexusvault",
-      Key: fileName,
-      ContentType: fileType
-    });
+        const command = new PutObjectCommand({
+            Bucket: "my-nexusvault",
+            Key: fileName,
+            ContentType: fileType
+        });
 
-    const uploadUrl = await getSignedUrl(s3, command, {
-      expiresIn: 60
-    });
+        const uploadUrl = await getSignedUrl(s3, command, {
+            expiresIn: 60
+        });
 
-    res.json({
-      success: true,
-      uploadUrl,
-      fileUrl: `https://my-nexusvault.s3.amazonaws.com/${fileName}`
-    });
+        res.json({
+            success: true,
+            uploadUrl,
+            fileUrl: `https://my-nexusvault.s3.amazonaws.com/${fileName}`
+        });
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error generating URL" });
-  }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error generating URL" });
+    }
 };
 /**
  * @desc    Upload file
