@@ -10,7 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
-const { s3 } = require('../config/s3'); // or wherever your S3 client is
+// or wherever your S3 client is
 const config = require('../config/config');
 
 const s3 = new S3Client({
