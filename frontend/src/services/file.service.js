@@ -10,7 +10,7 @@ export const fileService = {
                 params: { fileType: file.type }
             });
 
-            const { uploadUrl, fileUrl } = res.data;
+            const { uploadUrl, fileUrl, fileKey } = res.data;
 
             // 2. Upload directly to S3
             await fetch(uploadUrl, {
@@ -24,6 +24,7 @@ export const fileService = {
             // 3. Save file metadata in backend (IMPORTANT)
             await api.post('/files/upload', {
                 url: fileUrl,
+                key: fileKey,
                 name: file.name,
                 type: file.type
             });

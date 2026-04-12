@@ -34,7 +34,8 @@ exports.getPresignedUploadUrl = async (req, res) => {
         res.json({
             success: true,
             uploadUrl,
-            fileUrl: `https://my-nexusvault.s3.amazonaws.com/${fileName}`
+            fileUrl: `https://my-nexusvault.s3.amazonaws.com/${fileName}`,
+            fileKey: fileName
         });
 
     } catch (error) {
@@ -49,9 +50,9 @@ exports.getPresignedUploadUrl = async (req, res) => {
  */
 exports.uploadFile = async (req, res) => {
     try {
-        const { url, name, type } = req.body;
+        const { url, name, type, key } = req.body;
 
-        if (!url || !name || !type) {
+        if (!url || !key || !name || !type) {
             return res.status(400).json({
                 success: false,
                 message: "Missing file data"
@@ -61,7 +62,7 @@ exports.uploadFile = async (req, res) => {
         const file = await File.create({
             filename: name,
             originalName: name,
-            path: url,
+            path: key,
             mimeType: type,
             owner: req.user.id,
             size: 0, // since S3 already has file
