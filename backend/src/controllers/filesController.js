@@ -8,8 +8,10 @@ const versioningService = require('../services/versioning/versioning.service');
 const { generateContentHash, successResponse, errorResponse, formatFileSize } = require('../utils/helpers');
 const path = require('path');
 const fs = require('fs');
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const { s3 } = require('../config/s3'); // or wherever your S3 client is
+const config = require('../config/config');
 
 const s3 = new S3Client({
     region: "ap-south-1"
@@ -183,22 +185,24 @@ exports.downloadFile = async (req, res) => {
             return errorResponse(res, 404, 'File not found');
         }
 
-        // Check if file exists in S3
-        const exists = await storageService.fileExists(file.path);
-        if (!exists) {
-            return errorResponse(res, 404, 'File not found on storage');
-        }
-
         // Update download count
         file.downloadCount += 1;
         file.lastAccessedAt = Date.now();
         await file.save();
 
-        // Stream file from S3 to response
-        const fileStream = await storageService.getFileStream(file.path);
-        res.setHeader('Content-Disposition', `attachment; filename="${file.originalName}"`);
-        res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
-        fileStream.pipe(res);
+        // 🔥 Generate signed URL from S3
+        const command = new GetObjectCommand({
+            Bucket: config.aws.bucketName,
+            Key: file.path
+        });
+
+        const signedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
+
+        // 🔥 Send URL to frontend
+        successResponse(res, 200, 'Download URL generated', {
+            downloadUrl: signedUrl
+        });
+
     } catch (error) {
         console.error('Error in downloadFile:', error);
         errorResponse(res, 500, 'Error downloading file');
@@ -221,30 +225,29 @@ exports.deleteFile = async (req, res) => {
             return errorResponse(res, 404, 'File not found');
         }
 
-        // Delete physical file
-        await storageService.deleteFile(file.path);
+        // 🔥 DELETE FROM S3
+        const command = new DeleteObjectCommand({
+            Bucket: config.aws.bucketName,
+            Key: file.path
+        });
+
+        await s3.send(command);
 
         // Update user storage
         const user = await User.findById(req.user.id);
         user.storageUsed -= file.size;
         await user.save();
 
-        // Delete file record
+        // Delete DB record
         await File.findByIdAndDelete(req.params.id);
 
-        successResponse(res, 200, 'File deleted successfully', {
-            storage: {
-                used: user.storageUsed,
-                quota: user.storageQuota,
-                percentage: user.getStoragePercentage()
-            }
-        });
+        successResponse(res, 200, 'File deleted successfully');
+
     } catch (error) {
         console.error('Error in deleteFile:', error);
         errorResponse(res, 500, 'Error deleting file');
     }
 };
-
 /**
  * @desc    Search files
  * @route   GET /api/files/search
