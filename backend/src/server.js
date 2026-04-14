@@ -16,13 +16,23 @@ const app = express();
 connectDatabase();
 
 // Middleware
+
 app.use(cors({
-    origin: ["http://localhost:5173", "https://nexus-vault-la1r.vercel.app"],
+    origin: function (origin, callback) {
+        if (
+            !origin || // allow Postman / curl
+            origin.includes("vercel.app") ||
+            origin === "http://localhost:5173"
+        ) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
