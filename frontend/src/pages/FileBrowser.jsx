@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { fileService } from '../services/file.service';
-import { Upload, Search, Download, Trash2, ArrowLeft } from 'lucide-react';
+import { sharingService } from '../services/sharing.service';
+import { Upload, Search, Download, Trash2, ArrowLeft, Share2, Users } from 'lucide-react';
 import '../styles/FileBrowser.css';
 
 const FileBrowser = () => {
@@ -12,6 +13,12 @@ const FileBrowser = () => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [fileToShare, setFileToShare] = useState(null);
+    const [shareEmail, setShareEmail] = useState('');
+    const [sharePermission, setSharePermission] = useState('view');
+    const [sharingFile, setSharingFile] = useState(false);
+    
     const fileInputRef = useRef(null);
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -76,6 +83,30 @@ const FileBrowser = () => {
         }
     };
 
+    const handleOpenShare = (file) => {
+        setFileToShare(file);
+        setShareEmail('');
+        setSharePermission('view');
+        setShareModalOpen(true);
+    };
+
+    const handleShareSubmit = async (e) => {
+        e.preventDefault();
+        if (!shareEmail) return;
+
+        setSharingFile(true);
+        try {
+            await sharingService.shareFile(fileToShare.id, shareEmail, sharePermission);
+            alert('File shared successfully!');
+            setShareModalOpen(false);
+        } catch (error) {
+            console.error('Error sharing file:', error);
+            alert(error.response?.data?.message || 'Error sharing file');
+        } finally {
+            setSharingFile(false);
+        }
+    };
+
     const handleSearch = async () => {
         if (!searchQuery.trim()) {
             loadFiles();
@@ -108,8 +139,14 @@ const FileBrowser = () => {
                         <span>NexusVault</span>
                     </div>
 
-                    <div className="user-avatar">
-                        {user?.name?.charAt(0).toUpperCase()}
+                    <div className="flex" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <button onClick={() => navigate('/shared-files')} className="btn btn-ghost" style={{ padding: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Users size={16} />
+                            Shared Files
+                        </button>
+                        <div className="user-avatar">
+                            {user?.name?.charAt(0).toUpperCase()}
+                        </div>
                     </div>
                 </div>
             </header>
@@ -210,6 +247,13 @@ const FileBrowser = () => {
                                             <Download size={15} />
                                         </button>
                                         <button
+                                            onClick={() => handleOpenShare(file)}
+                                            className="action-btn"
+                                            title="Share"
+                                        >
+                                            <Share2 size={15} />
+                                        </button>
+                                        <button
                                             onClick={() => handleDelete(file.id)}
                                             className="action-btn delete"
                                             title="Delete"
@@ -238,6 +282,45 @@ const FileBrowser = () => {
                             <Upload size={16} />
                             Upload File
                         </button>
+                    </div>
+                )}
+                
+                {/* Share Modal */}
+                {shareModalOpen && (
+                    <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+                        <div className="modal-content" style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', width: '450px', maxWidth: '90%', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'}}>
+                            <h2 style={{ marginBottom: '1rem', fontSize: '1.25rem', color: '#333' }}>Share: <span style={{fontWeight:'normal', color:'#666'}}>{fileToShare?.name}</span></h2>
+                            <form onSubmit={handleShareSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                                <div>
+                                    <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#444'}}>Target User Email</label>
+                                    <input 
+                                        type="email" 
+                                        required 
+                                        value={shareEmail} 
+                                        onChange={(e) => setShareEmail(e.target.value)}
+                                        style={{width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '1rem'}}
+                                        placeholder="Enter the user's email address"
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#444'}}>Permission Level</label>
+                                    <select 
+                                        value={sharePermission} 
+                                        onChange={(e) => setSharePermission(e.target.value)}
+                                        style={{width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '1rem', backgroundColor: 'white'}}
+                                    >
+                                        <option value="view">View Only</option>
+                                        <option value="edit">Can Edit</option>
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem'}}>
+                                    <button type="button" onClick={() => setShareModalOpen(false)} className="btn btn-ghost" disabled={sharingFile} style={{padding: '0.5rem 1rem'}}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary" disabled={sharingFile} style={{padding: '0.5rem 1.5rem'}}>
+                                        {sharingFile ? 'Sharing...' : 'Share File'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 )}
             </main>

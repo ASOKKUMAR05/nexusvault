@@ -36,7 +36,7 @@ exports.getPresignedUploadUrl = async (req, res) => {
         res.json({
             success: true,
             uploadUrl,
-            fileUrl: `https://my-nexusvault.s3.amazonaws.com/${fileName}`,
+            fileUrl: `https://d2zyqkp9ae3018.cloudfront.net/${fileName}`,
             fileKey: fileName
         });
 

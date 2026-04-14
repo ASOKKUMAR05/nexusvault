@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import FileBrowser from './pages/FileBrowser';
+import SharedFiles from './pages/SharedFiles';
 import './index.css';
 
 function App() {
@@ -27,6 +28,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <FileBrowser />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shared-files"
+            element={
+              <ProtectedRoute>
+                <SharedFiles />
               </ProtectedRoute>
             }
           />

@@ -1,8 +1,10 @@
 import api from './api';
 
+const CLOUDFRONT_URL = "https://d2zyqkp9ae3018.cloudfront.net";
+
 export const fileService = {
 
-    // 🚀 Upload file using Pre-Signed URL
+    //  Upload file using Pre-Signed URL
     uploadFile: async (file, onProgress) => {
         try {
             // 1. Get presigned URL from backend
@@ -10,7 +12,7 @@ export const fileService = {
                 params: { fileType: file.type }
             });
 
-            const { uploadUrl, fileUrl, fileKey } = res.data;
+            const { uploadUrl, fileKey } = res.data;
 
             // 2. Upload directly to S3
             await fetch(uploadUrl, {
@@ -21,20 +23,18 @@ export const fileService = {
                 body: file
             });
 
-            // 3. Save file metadata in backend (IMPORTANT)
+            // 3. Save metadata in backend
             await api.post('/files/upload', {
-                url: fileUrl,
                 key: fileKey,
                 name: file.name,
                 type: file.type
             });
 
-            // 4. Progress (since fetch doesn't support progress)
             if (onProgress) onProgress(100);
 
             return {
                 success: true,
-                fileUrl
+                fileUrl: `${CLOUDFRONT_URL}/${fileKey}`
             };
 
         } catch (error) {
@@ -43,40 +43,41 @@ export const fileService = {
         }
     },
 
-    // Get all files
+    //  Get all files
     getFiles: async (params = {}) => {
         const response = await api.get('/files', { params });
         return response.data;
     },
 
-    // Get file by ID
+    //  Get file by ID
     getFileById: async (id) => {
         const response = await api.get(`/files/${id}`);
         return response.data;
     },
 
-    // Download file
-    downloadFile: async (id, filename) => {
-        const response = await api.get(`/files/${id}/download`, {
-            responseType: 'blob'
-        });
+    //  UPDATED DOWNLOAD (IMPORTANT CHANGE)
+    downloadFile: async (id) => {
+        try {
+            const response = await api.get(`/files/${id}/download`);
 
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+            const { downloadUrl } = response.data.data;
+
+            //  Open directly (fast, uses CloudFront/S3)
+            window.open(downloadUrl, "_blank");
+
+        } catch (error) {
+            console.error("Download error:", error);
+            throw error;
+        }
     },
 
-    // Delete file
+    //  Delete file
     deleteFile: async (id) => {
         const response = await api.delete(`/files/${id}`);
         return response.data;
     },
 
-    // Search files
+    //  Search files
     searchFiles: async (query, filters = {}) => {
         const response = await api.get('/files/search', {
             params: { q: query, ...filters }
@@ -84,15 +85,20 @@ export const fileService = {
         return response.data;
     },
 
-    // Get duplicates
+    //  Get duplicates
     getDuplicates: async () => {
         const response = await api.get('/files/duplicates');
         return response.data;
     },
 
-    // Get storage stats
+    // Storage stats
     getStorageStats: async () => {
         const response = await api.get('/files/stats');
         return response.data;
+    },
+
+    // Get CloudFront URL helper (NEW)
+    getFileUrl: (key) => {
+        return `${CLOUDFRONT_URL}/${key}`;
     }
 };
