@@ -8,6 +8,7 @@ const versioningService = require('../services/versioning/versioning.service');
 const { generateContentHash, successResponse, errorResponse, formatFileSize } = require('../utils/helpers');
 const path = require('path');
 const fs = require('fs');
+import { getCloudFrontSignedUrl } from "../utils/cloudfront.js";
 const { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 // or wherever your S3 client is
@@ -190,15 +191,9 @@ exports.downloadFile = async (req, res) => {
         file.lastAccessedAt = Date.now();
         await file.save();
 
-        // 🔥 Generate signed URL from S3
-        const command = new GetObjectCommand({
-            Bucket: config.aws.bucketName,
-            Key: file.path
-        });
+        // 🔥 CloudFront Signed URL
+        const signedUrl = getCloudFrontSignedUrl(file.path);
 
-        const signedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
-
-        // 🔥 Send URL to frontend
         successResponse(res, 200, 'Download URL generated', {
             downloadUrl: signedUrl
         });
@@ -208,7 +203,6 @@ exports.downloadFile = async (req, res) => {
         errorResponse(res, 500, 'Error downloading file');
     }
 };
-
 /**
  * @desc    Delete file
  * @route   DELETE /api/files/:id
